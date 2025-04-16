@@ -10,10 +10,10 @@ SERVER = "Exness-MT5Trial14"
 
 SYMBOLS = ["XAUUSDm", "EURUSDm"]
 RISK_PER_TRADE = 0.01
-MIN_WIN_PROB = 0.75
-LOOP_DELAY = 5  # seconds between checks
-SL_MULTIPLIER = 1.2  # ATR based SL
-TP_MULTIPLIER = 2.0  # ATR based TP
+MAX_MARGIN_USAGE = 0.15  # Use max 15% of account margin
+LOOP_DELAY = 5
+SL_MULTIPLIER = 1.2
+TP_MULTIPLIER = 2.0
 
 # === CONNECT ===
 def connect():
@@ -56,19 +56,35 @@ def check_entry(df):
     df['rsi'] = rsi(df)
     df['atr'] = atr(df)
 
-    bullish = df['ema9'].iloc[-1] > df['ema21'].iloc[-1] and df['rsi'].iloc[-1] > 55
-    bearish = df['ema9'].iloc[-1] < df['ema21'].iloc[-1] and df['rsi'].iloc[-1] < 45
+    last = df.iloc[-1]
+    trend_up = last['ema9'] > last['ema21']
+    trend_down = last['ema9'] < last['ema21']
+    strong_momentum_up = last['rsi'] > 60
+    strong_momentum_down = last['rsi'] < 40
+    body = abs(last['close'] - last['open'])
+    wick = last['high'] - last['low']
+    volatility_ok = wick != 0 and (body / wick) > 0.5
 
-    if bullish:
-        return "BUY", df['atr'].iloc[-1]
-    elif bearish:
-        return "SELL", df['atr'].iloc[-1]
+    if trend_up and strong_momentum_up and volatility_ok:
+        return "BUY", last['atr']
+    elif trend_down and strong_momentum_down and volatility_ok:
+        return "SELL", last['atr']
     return None
 
-# === RISK ===
-def calc_lot(balance, sl_pips, pip_value=10):
-    risk_amt = balance * RISK_PER_TRADE
-    return round(max(risk_amt / (sl_pips * pip_value), 0.01), 2)
+# === LOT SIZE BASED ON AVAILABLE MARGIN ===
+def calc_lot(symbol, sl_pips, balance):
+    info = mt5.symbol_info(symbol)
+    contract_size = info.trade_contract_size
+    tick_value = info.trade_tick_value
+    margin_per_lot = info.margin_initial
+
+    if margin_per_lot == 0:
+        print(f"⚠️ Could not get margin per lot for {symbol}")
+        return 0.01
+
+    max_margin = balance * MAX_MARGIN_USAGE
+    lots = max_margin / margin_per_lot
+    return round(max(min(lots, 1.0), 0.01), 2)
 
 # === EXECUTION ===
 def send_trade(symbol, signal, atr_value, balance):
@@ -80,7 +96,10 @@ def send_trade(symbol, signal, atr_value, balance):
 
     sl_pips = round(atr_value * SL_MULTIPLIER / point)
     tp_pips = round(atr_value * TP_MULTIPLIER / point)
-    lot = calc_lot(balance, sl_pips)
+    lot = calc_lot(symbol, sl_pips, balance)
+
+    if lot == 0.01:
+        print(f"⚠️ Minimum lot used due to margin constraints.")
 
     sl = price - sl_pips * point if signal == "BUY" else price + sl_pips * point
     tp = price + tp_pips * point if signal == "BUY" else price - tp_pips * point
@@ -103,7 +122,7 @@ def send_trade(symbol, signal, atr_value, balance):
     result = mt5.order_send(request)
     print(f"⚡ {signal} | {symbol} @ {round(price, digits)} | Lot: {lot} | SL: {round(sl, digits)} | TP: {round(tp, digits)} | Result: {result.retcode}")
 
-# === LIVE BOT ===
+# === BOT LOOP ===
 def run():
     connect()
     while True:
@@ -116,9 +135,9 @@ def run():
             if signal:
                 send_trade(symbol, signal[0], signal[1], balance)
             else:
-                print(f"{symbol} → No clear signal.")
+                print(f"{symbol} → No strong setup.")
         time.sleep(LOOP_DELAY)
 
-# === EXECUTE ===
+# === START ===
 if __name__ == "__main__":
     run()
