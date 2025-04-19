@@ -101,3 +101,6 @@ AttributeError: module 'MetaTrader5' has no attribute 'time_current'
 2025-04-19 20:21:00,620 INFO Exit BUY at 85359.230, retcode=10009
 2025-04-19 20:22:00,325 INFO Entry BUY at 85394.360, retcode=10009
 2025-04-19 20:22:00,599 INFO Exit BUY at 85365.660, retcode=10009
+2025-04-19 20:23:00,362 INFO Entry BUY at 85400.410, retcode=10009
+2025-04-19 20:23:00,628 INFO Exit BUY at 85370.780, retcode=10009
+2025-04-19 20:23:24,593 INFO MT5 shutdown
