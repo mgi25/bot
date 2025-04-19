@@ -1,0 +1,23 @@
+2025-04-19 19:35:28,148 INFO Live bot started
+2025-04-19 19:36:00,001 ERROR Error in live bot
+Traceback (most recent call last):
+  File "C:\Users\mgial\OneDrive\Documents\bot\vpt-bot.py", line 157, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\mgial\OneDrive\Documents\bot\vpt-bot.py", line 83, in main
+    bars = mt5.copy_rates_from_time(SYMBOL, TIMEFRAME, bar_time, 1)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'MetaTrader5' has no attribute 'copy_rates_from_time'. Did you mean: 'copy_rates_from_pos'?
+2025-04-19 19:37:02,587 INFO Live bot started
+2025-04-19 19:38:00,000 ERROR Error in live bot
+Traceback (most recent call last):
+  File "C:\Users\mgial\OneDrive\Documents\bot\vpt-bot.py", line 157, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\mgial\OneDrive\Documents\bot\vpt-bot.py", line 83, in main
+    bars = mt5.copy_rates_from_time(SYMBOL, TIMEFRAME, bar_time, 1)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'MetaTrader5' has no attribute 'copy_rates_from_time'. Did you mean: 'copy_rates_from_pos'?
+2025-04-19 19:38:22,442 INFO Live bot started
+2025-04-19 19:41:53,152 INFO MT5 initialized and symbol selected
+2025-04-19 19:41:53,157 INFO Live bot started
