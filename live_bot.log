@@ -21,3 +21,79 @@ AttributeError: module 'MetaTrader5' has no attribute 'copy_rates_from_time'. Di
 2025-04-19 19:38:22,442 INFO Live bot started
 2025-04-19 19:41:53,152 INFO MT5 initialized and symbol selected
 2025-04-19 19:41:53,157 INFO Live bot started
+2025-04-19 19:47:03,578 INFO MT5 shutdown
+2025-04-19 19:47:05,556 INFO MT5 initialized and symbol selected
+2025-04-19 19:47:05,983 INFO Live bot started
+2025-04-19 19:51:53,956 INFO MT5 shutdown
+2025-04-19 19:51:56,555 INFO MT5 initialized and symbol selected
+2025-04-19 19:51:56,558 INFO Live bot started
+2025-04-19 19:54:47,556 INFO MT5 shutdown
+2025-04-19 19:54:49,298 INFO MT5 initialized and symbol selected
+2025-04-19 19:54:49,300 INFO Live bot started
+2025-04-19 19:55:00,340 INFO Entry SELL at 85446.960, retcode=10009
+2025-04-19 19:55:00,341 ERROR Error in live bot
+Traceback (most recent call last):
+  File "C:\Users\mgial\OneDrive\Documents\bot\vpt-bot.py", line 179, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\mgial\OneDrive\Documents\bot\vpt-bot.py", line 155, in main
+    ptime.sleep(max((end_time - datetime.now(timezone.utc)).total_seconds() - 0.5, 0))
+                     ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TypeError: can't subtract offset-naive and offset-aware datetimes
+2025-04-19 19:55:00,344 INFO MT5 shutdown
+2025-04-19 19:56:21,067 INFO MT5 initialized and symbol selected
+2025-04-19 19:56:21,069 INFO Live bot started
+2025-04-19 19:57:00,293 INFO Entry SELL at 85472.400, retcode=10009
+2025-04-19 19:57:00,569 INFO Exit SELL at 85501.150, retcode=10009
+2025-04-19 19:57:00,836 INFO Exit SELL at 85501.320, retcode=10009
+2025-04-19 19:59:00,291 INFO Entry SELL at 85451.490, retcode=10009
+2025-04-19 19:59:00,573 INFO Exit SELL at 85480.290, retcode=10009
+2025-04-19 20:00:00,293 INFO Entry BUY at 85484.810, retcode=10009
+2025-04-19 20:00:00,557 INFO Exit BUY at 85456.430, retcode=10009
+2025-04-19 20:01:00,300 INFO Entry BUY at 85503.560, retcode=10009
+2025-04-19 20:01:00,585 INFO Exit BUY at 85474.760, retcode=10009
+2025-04-19 20:03:00,352 INFO Entry SELL at 85489.930, retcode=10009
+2025-04-19 20:03:00,632 INFO Exit SELL at 85523.360, retcode=10009
+2025-04-19 20:04:00,311 INFO Entry SELL at 85471.770, retcode=10009
+2025-04-19 20:04:00,618 INFO Exit SELL at 85501.790, retcode=10009
+2025-04-19 20:05:00,333 INFO Entry BUY at 85431.060, retcode=10009
+2025-04-19 20:05:00,643 INFO Exit BUY at 85402.270, retcode=10009
+2025-04-19 20:05:58,816 INFO MT5 shutdown
+2025-04-19 20:06:02,108 INFO MT5 initialized and symbol selected
+2025-04-19 20:06:02,110 INFO Live bot started
+2025-04-19 20:07:00,362 INFO Entry BUY at 85451.530, retcode=10009
+2025-04-19 20:07:00,363 INFO Exit BUY at -inf, retcode=10015
+2025-04-19 20:08:00,651 INFO Entry BUY at 85456.760, retcode=10009
+2025-04-19 20:08:00,652 INFO Exit BUY at -inf, retcode=10015
+2025-04-19 20:09:02,090 INFO MT5 shutdown
+2025-04-19 20:09:06,239 INFO MT5 initialized and symbol selected
+2025-04-19 20:09:06,241 INFO Live bot started
+2025-04-19 20:09:06,242 ERROR Error in live bot
+Traceback (most recent call last):
+  File "C:\Users\mgial\OneDrive\Documents\bot\vpt-bot.py", line 211, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\mgial\OneDrive\Documents\bot\vpt-bot.py", line 77, in main
+    server_ts = mt5.time_current()
+                ^^^^^^^^^^^^^^^^
+AttributeError: module 'MetaTrader5' has no attribute 'time_current'
+2025-04-19 20:09:06,249 INFO MT5 shutdown
+2025-04-19 20:10:08,129 INFO MT5 initialized and symbol selected
+2025-04-19 20:10:08,131 INFO Live bot started
+2025-04-19 20:11:00,321 INFO Entry SELL at 85398.330, retcode=10009
+2025-04-19 20:11:00,621 INFO Exit SELL at 85398.330, retcode=10009
+2025-04-19 20:13:00,418 INFO Entry BUY at 85415.070, retcode=10009
+2025-04-19 20:13:00,702 INFO Exit BUY at 85415.070, retcode=10009
+2025-04-19 20:13:32,499 INFO MT5 shutdown
+2025-04-19 20:13:47,788 INFO MT5 initialized and symbol selected
+2025-04-19 20:13:47,790 INFO Live bot started
+2025-04-19 20:14:00,328 INFO Entry BUY at 85395.770, retcode=10009
+2025-04-19 20:14:00,611 INFO Exit BUY at 85367.880, retcode=10009
+2025-04-19 20:16:04,324 INFO MT5 shutdown
+2025-04-19 20:17:00,416 INFO MT5 initialized and symbol selected
+2025-04-19 20:17:00,419 INFO Live bot started
+2025-04-19 20:18:00,292 INFO Entry SELL at 85395.280, retcode=10009
+2025-04-19 20:18:00,575 INFO Exit SELL at 85424.020, retcode=10009
+2025-04-19 20:19:04,424 INFO MT5 shutdown
+2025-04-19 20:19:27,243 INFO MT5 initialized and symbol selected
+2025-04-19 20:19:27,245 INFO Live bot started

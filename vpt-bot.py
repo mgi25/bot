@@ -9,13 +9,13 @@ import logging
 LOGIN            = 240512732
 PASSWORD         = "Mgi@2005"
 SERVER           = "Exness-MT5Trial6"
-SYMBOL           = "XAUUSDm"
+SYMBOL           = "BTCUSDm"
 TIMEFRAME        = mt5.TIMEFRAME_M1
 LOT_SIZE         = 0.01        # 0.01 lot = 1 oz
 PRICE_STEP       = 0.01        # volume profile bin size
 ATR_PERIOD       = 14          # ATR period
 SKEW_THRESHOLD   = 0.1         # minimum absolute skew to trade
-VOL_SPIKE_FACTOR = 1.5         # bar volume > factor * avg volume
+VOL_SPIKE_FACTOR = 0.8         # bar tick count > factor * avg tick count
 TRADING_START    = time(7,5)   # UTC
 TRADING_END      = time(20,55) # UTC
 MAGIC            = 123456
@@ -32,8 +32,7 @@ def initialize():
     print("Initializing MT5...")
     if not mt5.initialize(server=SERVER, login=LOGIN, password=PASSWORD):
         msg = f"MT5 init failed: {mt5.last_error()}"
-        print(msg)
-        logging.error(msg)
+        print(msg); logging.error(msg)
         raise SystemExit
     mt5.symbol_select(SYMBOL, True)
     print(f"Connected to MT5 and selected symbol {SYMBOL}")
@@ -56,54 +55,50 @@ def calc_skew(df_ticks):
     vp = df.groupby('bin')['volume'].sum().sort_index()
     if vp.empty:
         return None
-    poc = vp.idxmax()
-    total = vp.sum(); cum = 0.0; included = []
+    poc = vp.idxmax(); total = vp.sum(); cum = 0.0; inc = []
     for p, v in vp.sort_values(ascending=False).items():
-        cum += v; included.append(p)
+        cum += v; inc.append(p)
         if cum >= 0.7 * total:
             break
-    val, vah = min(included), max(included)
+    val, vah = min(inc), max(inc)
     width = vah - val; mid = (val + vah) / 2
     return (poc - mid) / width if width > 0 else 0
 
 # === MAIN LOOP ===
 def main():
     initialize()
-    # Precompute average bar volume for spike filter
+    # Precompute average tick count per bar
     bars_hist = mt5.copy_rates_from_pos(SYMBOL, TIMEFRAME, 1, 200)
     df_hist = pd.DataFrame(bars_hist)
-    df_hist['bar_vol'] = df_hist['tick_volume']
-    avg_bar_vol = df_hist['bar_vol'].mean()
-    vol_thresh = avg_bar_vol * VOL_SPIKE_FACTOR
-    print(f"Average bar volume: {avg_bar_vol:.2f}, threshold set to {vol_thresh:.2f}")
+    avg_ticks = df_hist['tick_volume'].mean()
+    tick_thresh = avg_ticks * VOL_SPIKE_FACTOR
+    print(f"Avg tick count: {avg_ticks:.0f}, threshold: {tick_thresh:.0f}")
 
     logging.info("Live bot started")
     print("Live bot started. Entering main loop...")
     while True:
+        # sync to top of minute
         now = datetime.now(timezone.utc)
-        # Sleep until the top of the next minute
         next_min = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
-        secs = (next_min - datetime.now(timezone.utc)).total_seconds()
-        ptime.sleep(max(secs, 0))
+        ptime.sleep(max((next_min - datetime.now(timezone.utc)).total_seconds(), 0))
 
-        # Determine bar timestamp
         bar_time = next_min - timedelta(minutes=1)
         t = bar_time.time()
-        # Time-of-day filter
         if not (TRADING_START <= t <= TRADING_END):
             print(f"Outside trading hours: {t}")
             continue
 
-        # Fetch last closed bar via position offset
+        # fetch last closed bar
         bars = mt5.copy_rates_from_pos(SYMBOL, TIMEFRAME, 1, 1)
         if not bars:
             print("No bars returned")
             continue
         bar = bars[0]
-        open_time = datetime.fromtimestamp(bar['time'])
-        print(f"Processing bar at {open_time}")
+        # use UTC timestamp
+        open_time = datetime.fromtimestamp(bar['time'], tz=timezone.utc)
+        print(f"Processing bar at {open_time.isoformat()}")
 
-        # ATR filter
+        # ATR check
         atr_bars = mt5.copy_rates_from_pos(SYMBOL, TIMEFRAME, 1, ATR_PERIOD+1)
         df_atr = pd.DataFrame(atr_bars)
         df_atr['tr'] = df_atr[['high','low','close']].apply(
@@ -115,31 +110,34 @@ def main():
             continue
         print(f"ATR: {atr:.5f}")
 
-        # Tick data for this bar and volume-spike filter
+        # tick count filter
+        bar_ticks = bar['tick_volume']
+        print(f"Bar tick count: {bar_ticks}")
+        if bar_ticks < tick_thresh:
+            print("Tick count below threshold, skipping")
+            continue
+
+        # fetch tick data
         end_time = open_time + timedelta(minutes=1)
         ticks = mt5.copy_ticks_range(SYMBOL, open_time, end_time, mt5.COPY_TICKS_ALL)
         df_ticks = pd.DataFrame(ticks)
-        bar_vol = df_ticks['volume'].sum() if not df_ticks.empty else 0
-        print(f"Bar volume: {bar_vol}")
-        if bar_vol < vol_thresh:
-            print("Volume below threshold")
+        if df_ticks.empty:
+            print("No tick data")
             continue
 
-        # Compute skew signal
+        # compute skew
         skew = calc_skew(df_ticks)
         print(f"Skew: {skew:.4f}")
         if skew is None or abs(skew) < SKEW_THRESHOLD:
-            print("Skew below threshold")
+            print("Skew below threshold, skipping")
             continue
 
-        # Determine order parameters
+        # place entry
         tick = mt5.symbol_info_tick(SYMBOL)
         if skew > 0:
-            order_type = mt5.ORDER_TYPE_BUY; price = tick.ask; side = 'BUY'
+            order_type, price, side = mt5.ORDER_TYPE_BUY, tick.ask, 'BUY'
         else:
-            order_type = mt5.ORDER_TYPE_SELL; price = tick.bid; side = 'SELL'
-
-        # Send market order
+            order_type, price, side = mt5.ORDER_TYPE_SELL, tick.bid, 'SELL'
         req = {
             'action':       mt5.TRADE_ACTION_DEAL,
             'symbol':       SYMBOL,
@@ -156,12 +154,8 @@ def main():
         print(f"Entry {side} at {price:.3f}, retcode={res.retcode}")
         logging.info(f"Entry {side} at {price:.3f}, retcode={res.retcode}")
 
-        # Exit at bar close: sleep until end of candle
-        exit_time = open_time + timedelta(minutes=1)
-        secs_exit = (exit_time - datetime.now(timezone.utc)).total_seconds() - 0.5
-        ptime.sleep(max(secs_exit, 0))
-
-        # Close any open position for this symbol
+        # exit at close of candle
+        ptime.sleep(max((end_time - datetime.now(timezone.utc)).total_seconds() - 0.5, 0))
         positions = mt5.positions_get(symbol=SYMBOL)
         for pos in positions:
             close_type = mt5.ORDER_TYPE_SELL if pos.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
@@ -191,3 +185,5 @@ if __name__ == '__main__':
         logging.exception("Error in live bot")
     finally:
         shutdown()
+
+#this one
