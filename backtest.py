@@ -1,116 +1,112 @@
 import MetaTrader5 as mt5
 import pandas as pd
-from datetime import datetime
-import matplotlib.pyplot as plt
+import numpy as np
+from datetime import datetime, timedelta, time
 
-# === CONFIG ===
-LOGIN = 244499687
-PASSWORD = "Mgi@2005"
-SERVER = "Exness-MT5Trial14"
+# === CONFIGURATION ===
+SYMBOL             = "XAUUSDm"
+TIMEFRAME          = mt5.TIMEFRAME_M1
+N_BARS             = 2000       # number of M1 bars to backtest
+PRICE_STEP         = 0.01       # volume profile bin size
+ATR_PERIOD         = 14         # ATR period for volatility filter
+SKEW_THRESHOLD     = 0.1        # minimum absolute skew to consider
+VOL_SPIKE_FACTOR   = 1.5        # require bar volume > factor * avg volume
+TRADING_START      = time(7,5)  # UTC start of trading window
+TRADING_END        = time(20,55)# UTC end of trading window
 
-SYMBOL = "XAUUSDm"
-START_DATE = datetime(2024, 12, 1)
-END_DATE = datetime(2025, 1, 1)
-RISK_PER_TRADE = 0.01
-BALANCE = 1000.0
-TP_MULTIPLIER = 2
+# === INITIALIZE MT5 ===
+if not mt5.initialize():
+    raise RuntimeError(f"MT5 init failed: {mt5.last_error()}")
 
-# === CONNECT TO MT5 ===
-def connect():
-    if not mt5.initialize():
-        print("Init failed", mt5.last_error())
-        quit()
-    if not mt5.login(LOGIN, PASSWORD, SERVER):
-        print("Login failed", mt5.last_error())
-        quit()
-    print("🟢 Connected to MT5")
+# === FETCH HISTORICAL BARS ===
+bars = mt5.copy_rates_from_pos(SYMBOL, TIMEFRAME, 1, N_BARS)
+df_b = pd.DataFrame(bars)
+df_b['time'] = pd.to_datetime(df_b['time'], unit='s')
 
-connect()
+# === COMPUTE ATR ===
+df_b['tr'] = df_b[['high','low','close']].apply(
+    lambda r: max(r['high']-r['low'], abs(r['high']-r['close']), abs(r['low']-r['close'])),
+    axis=1)
+df_b['atr'] = df_b['tr'].rolling(ATR_PERIOD).mean()
 
-# === LOAD HISTORICAL DATA ===
-rates = mt5.copy_rates_range(SYMBOL, mt5.TIMEFRAME_M1, START_DATE, END_DATE)
-df = pd.DataFrame(rates)
-df['time'] = pd.to_datetime(df['time'], unit='s')
-df.set_index('time', inplace=True)
+# === FUNCTION TO CALCULATE SKEW ===
+def calc_skew(df_ticks):
+    if df_ticks.empty:
+        return None
+    df = df_ticks.copy()
+    df['price'] = (df['bid'] + df['ask']) / 2
+    df['volume'] = df['volume'].replace(0, 1)
+    df['bin'] = (df['price'] / PRICE_STEP).round() * PRICE_STEP
+    vp = df.groupby('bin')['volume'].sum().sort_index()
+    if vp.empty:
+        return None
+    poc = vp.idxmax()
+    total = vp.sum(); cum = 0.0; included = []
+    for price, vol in vp.sort_values(ascending=False).items():
+        cum += vol; included.append(price)
+        if cum >= 0.7 * total:
+            break
+    val = min(included); vah = max(included)
+    width = vah - val; mid = (val + vah) / 2
+    return (poc - mid) / width if width > 0 else 0
 
-# === CALCULATE INDICATORS ===
-df['EMA5'] = df['close'].ewm(span=5).mean()
-df['EMA10'] = df['close'].ewm(span=10).mean()
-df['ATR'] = df['high'] - df['low']
+# === COLLECT BAR-LEVEL FEATURES ===
+records = []
+for i, row in df_b.iterrows():
+    if pd.isna(row['atr']):
+        continue
+    # Time-of-day filter
+    t = row['time'].time()
+    if not (TRADING_START <= t <= TRADING_END):
+        continue
+    # Tick data for this bar
+    start = row['time']; end = start + timedelta(minutes=1)
+    ticks = mt5.copy_ticks_range(SYMBOL, start.to_pydatetime(), end.to_pydatetime(), mt5.COPY_TICKS_ALL)
+    df_ticks = pd.DataFrame(ticks)
+    if df_ticks.empty:
+        continue
+    # Compute total bar volume for spike filter
+    bar_vol = df_ticks['volume'].sum()
+    records.append({
+        'time': row['time'],
+        'open': row['open'], 'high': row['high'], 'low': row['low'],
+        'atr': row['atr'], 'bar_vol': bar_vol,
+        'ticks': df_ticks
+    })
 
-# === BACKTEST LOGIC ===
-balance = BALANCE
-open_trade = None
-trade_log = []
+# Build DataFrame
+df_feats = pd.DataFrame(records)
+# Volume spike threshold
+avg_vol = df_feats['bar_vol'].mean()
+vol_thresh = avg_vol * VOL_SPIKE_FACTOR
 
-for i in range(15, len(df)):
-    row = df.iloc[i]
-    prev = df.iloc[i - 1]
-    point = mt5.symbol_info(SYMBOL).point
+# === BACKTEST SIMULATION ===
+results = []
+for _, r in df_feats.iterrows():
+    # ATR filter
+    if r['atr'] < df_b['atr'].mean():
+        continue
+    # Volume spike filter
+    if r['bar_vol'] < vol_thresh:
+        continue
+    # Compute skew
+    skew = calc_skew(r['ticks'])
+    if skew is None or abs(skew) < SKEW_THRESHOLD:
+        continue
+    # Determine PnL capturing full intrabar movement
+    if skew > 0:
+        side = 'BUY'
+        pnl = r['high'] - r['open']
+    else:
+        side = 'SELL'
+        pnl = r['open'] - r['low']
+    results.append({'time': r['time'], 'side': side, 'skew': skew, 'pnl': pnl})
 
-    # Check for entry
-    if open_trade is None:
-        bullish = row['EMA5'] > row['EMA10']
-        atr = row['ATR']
-        price = row['close']
-        sl_pips = atr / point if atr > 0 else 50
-        tp_pips = sl_pips * TP_MULTIPLIER
+# === SUMMARY ===
+df_res = pd.DataFrame(results)
+print(f"Total signals: {len(df_res)}")
+print(f"Total PnL: {df_res['pnl'].sum():.4f} points")
+print(f"Avg PnL per trade: {df_res['pnl'].mean():.4f}")
+print(f"Win rate: {(df_res['pnl'] > 0).mean():.2%}")
 
-        if bullish:
-            sl = price - sl_pips * point
-            tp = price + tp_pips * point
-            risk_amount = balance * RISK_PER_TRADE
-            pip_value = 1 if "USD" not in SYMBOL else 10
-            lot = round(risk_amount / (sl_pips * pip_value), 2)
-            open_trade = {
-                'entry_price': price,
-                'sl': sl,
-                'tp': tp,
-                'lot': lot,
-                'entry_time': row.name,
-                'sl_pips': sl_pips,
-                'tp_pips': tp_pips
-            }
-
-    # Check for exit
-    elif open_trade:
-        high = row['high']
-        low = row['low']
-        entry = open_trade['entry_price']
-        sl = open_trade['sl']
-        tp = open_trade['tp']
-        lot = open_trade['lot']
-
-        if low <= sl:
-            # SL hit
-            loss = -RISK_PER_TRADE * balance
-            balance += loss
-            trade_log.append({'time': row.name, 'result': 'SL', 'pnl': loss, 'balance': balance})
-            open_trade = None
-
-        elif high >= tp:
-            # TP hit
-            reward = RISK_PER_TRADE * balance * TP_MULTIPLIER
-            balance += reward
-            trade_log.append({'time': row.name, 'result': 'TP', 'pnl': reward, 'balance': balance})
-            open_trade = None
-
-# === RESULTS ===
-results = pd.DataFrame(trade_log)
-print("\n📈 Backtest Summary:")
-print(f"Total Trades: {len(results)}")
-print(f"Wins: {len(results[results['result'] == 'TP'])}")
-print(f"Losses: {len(results[results['result'] == 'SL'])}")
-print(f"Win Rate: {len(results[results['result'] == 'TP']) / len(results) * 100:.2f}%" if len(results) > 0 else "No trades")
-print(f"Final Balance: ${balance:.2f}")
-
-# === PLOT BALANCE CURVE ===
-if not results.empty:
-    plt.plot(results['time'], results['balance'])
-    plt.title("Equity Curve")
-    plt.ylabel("Balance")
-    plt.grid()
-    plt.show()
-
-# === DISCONNECT ===
 mt5.shutdown()

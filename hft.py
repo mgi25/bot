@@ -2,13 +2,15 @@ import MetaTrader5 as mt5
 import pandas as pd
 from datetime import datetime
 import time
+import os
 
 # === CONFIG ===
-LOGIN = 244499687
-PASSWORD = "Mgi@2005"
-SERVER = "Exness-MT5Trial14"
+LOGIN = 52278049
+PASSWORD = "c$O1f@g3S@hUqs"
+SERVER = "ICMarketsSC-Demo"
+MT5_PATH = "C:\\Program Files\\MetaTrader 5 IC Markets Global\\terminal64.exe"
 
-SYMBOLS = ["XAUUSDm", "EURUSDm"]
+SYMBOLS = ["XAUUSD", "EURUSD"]
 RISK_PER_TRADE = 0.01
 TRAIL_TRIGGER = 5
 TRAIL_STEP = 3
@@ -17,11 +19,11 @@ ATR_MULTIPLIER = 1.5  # Multiply ATR to give trades more breathing room
 
 # === CONNECT ===
 def connect():
-    if not mt5.initialize():
+    if not mt5.initialize(MT5_PATH):
         print("MT5 Init failed:", mt5.last_error())
         quit()
     if mt5.login(LOGIN, password=PASSWORD, server=SERVER):
-        print("🟢 Connected to Exness MT5")
+        print("🟢 Connected to ICMarkets MT5")
     else:
         print("❌ Login failed:", mt5.last_error())
         quit()
@@ -50,12 +52,11 @@ def should_enter_trade(symbol):
 
     bullish = last['EMA5'] > last['EMA10']
     bearish = last['EMA5'] < last['EMA10']
-    volatile = True  # currently disabled for tighter control later
     low_spread = spread < SPREAD_LIMIT * point
 
-    print(f"📊 {symbol} | Bullish: {bullish} | Bearish: {bearish} | Volatile: {volatile} | Spread OK: {low_spread} | ATR: {last['ATR']:.5f}/{avg_atr:.5f} | Spread: {spread/point:.1f} pts")
+    print(f"📊 {symbol} | Bullish: {bullish} | Bearish: {bearish} | Spread OK: {low_spread} | ATR: {last['ATR']:.5f}/{avg_atr:.5f} | Spread: {spread/point:.1f} pts")
 
-    if low_spread and volatile:
+    if low_spread:
         if bullish:
             return True, "BUY", last['ATR']
         elif bearish:
