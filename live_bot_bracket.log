@@ -1,0 +1,19 @@
+2025-04-20 09:25:46,016 INFO MT5 initialized and symbol selected
+2025-04-20 09:25:46,019 INFO Live bracket bot started
+2025-04-20 09:28:15,228 INFO MT5 shutdown
+2025-04-20 09:28:16,971 INFO MT5 initialized and symbol selected
+2025-04-20 09:28:16,973 INFO Live bracket bot started
+2025-04-20 09:28:49,997 INFO MT5 shutdown
+2025-04-20 09:32:08,508 INFO MT5 initialized and symbol selected
+2025-04-20 09:32:08,510 INFO Live bracket bot started
+2025-04-20 09:33:00,063 INFO Entry BUY at 85111.93 SL=85092.58 TP=85118.38, retcode=10016
+2025-04-20 09:33:19,832 INFO MT5 shutdown
+2025-04-20 09:33:21,440 INFO MT5 initialized and symbol selected
+2025-04-20 09:33:21,443 INFO Live bracket bot started
+2025-04-20 09:34:00,030 INFO Entry SELL at 85079.17 SL=85098.88 TP=85072.60, retcode=10016
+2025-04-20 09:35:53,052 INFO MT5 shutdown
+2025-04-20 09:36:15,869 INFO MT5 initialized and symbol selected
+2025-04-20 09:36:15,871 INFO Live bracket bot started
+2025-04-20 09:37:00,028 INFO Entry SELL at 85123.58, SL=85145.21, TP=85116.37, retcode=10016
+2025-04-20 09:38:00,019 INFO Entry BUY at 85151.32, SL=85129.18, TP=85158.70, retcode=10016
+2025-04-20 09:38:02,567 INFO MT5 shutdown

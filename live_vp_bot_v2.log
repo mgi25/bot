@@ -1,0 +1,14 @@
+2025-04-21 17:07:39,010 INFO Connected to MT5 and symbol selected: XAUUSDm
+2025-04-21 17:07:39,010 INFO Live VP Bot v2.0 is LIVE and tick-hunting...
+2025-04-21 17:07:39,018 INFO Live Skew: -0.5000, POC: 3399.89
+2025-04-21 17:07:39,216 INFO Entry SELL at 3399.929, retcode=10009
+2025-04-21 17:07:39,217 ERROR Bot crashed
+Traceback (most recent call last):
+  File "C:\Users\mgial\OneDrive\Documents\bot\vpt-bot2.py", line 107, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\mgial\OneDrive\Documents\bot\vpt-bot2.py", line 101, in main
+    time.sleep(10)  # cool down between trades
+    ^^^^
+NameError: name 'time' is not defined. Did you mean: 'ptime'? Or did you forget to import 'time'?
+2025-04-21 17:07:39,226 INFO MT5 shutdown

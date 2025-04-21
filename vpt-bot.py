@@ -9,14 +9,14 @@ import logging
 LOGIN            = 240512732
 PASSWORD         = "Mgi@2005"
 SERVER           = "Exness-MT5Trial6"
-SYMBOL           = "BTCUSDm"
+SYMBOL           = "XAUUSDm"
 TIMEFRAME        = mt5.TIMEFRAME_M1
-LOT_SIZE         = 0.01        # 0.01 lot = 1 oz
+LOT_SIZE         = 0.01       # 0.01 lot = 1 oz
 PRICE_STEP       = 0.01        # volume profile bin size
 ATR_PERIOD       = 14          # ATR period
 SKEW_THRESHOLD   = 0.1         # minimum absolute skew to trade
 VOL_SPIKE_FACTOR = 0.8         # bar tick count > factor * avg tick count
-TRADING_START    = time(7,5)   # UTC
+TRADING_START    = time(0,0)   # UTC
 TRADING_END      = time(20,55) # UTC
 MAGIC            = 123456
 
